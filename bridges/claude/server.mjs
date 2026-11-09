@@ -54,5 +54,3 @@ input.on('line',async line=>{
  try{out({id:m.id,result:await dispatch(m)});}catch(e){out({id:m.id,...(m.method==='tools/call'?{result:{isError:true,...toolResult({error:e.message})}}:{error:{code:-32602,message:e.message}})});}
 });
 input.on('close',()=>{for(const s of [...sessions.values()])s.close('Claude disconnected');});
-
-

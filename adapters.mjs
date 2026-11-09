@@ -1,6 +1,7 @@
 import {spawn} from 'node:child_process';
 import readline from 'node:readline';
 import {randomUUID} from 'node:crypto';
+import {AntigravityPeer,DeepSeekHarnessPeer} from './native-peers.mjs';
 
 // Existing MCP text-peer bridges can be used without embedding their machine paths.
 export class McpPeer {
@@ -22,7 +23,7 @@ export class McpPeer {
       this.pending.delete(m.id);clearTimeout(p.timer);
       m.error?p.reject(Error(m.error.message)):p.resolve(m.result);
     });
-    await this.request('initialize',{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'ai-council',version:'0.1.0'}},15000);
+    await this.request('initialize',{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'ai-council',version:'0.2.0'}},15000);
     this.write({jsonrpc:'2.0',method:'notifications/initialized'});
   }
   write(value) { if(this.closed)throw Error('Backend closed');this.proc.stdin.write(JSON.stringify(value)+'\n'); }
@@ -71,6 +72,8 @@ export class ApiPeer {
   close(){this.controller?.abort();}
 }
 export function createPeer(config){
+  if(config.type==='antigravity')return new AntigravityPeer(config);
+  if(config.type==='deepseek-harness')return new DeepSeekHarnessPeer(config);
   if(config.type==='mcp-peer')return new McpPeer(config);
   if(config.type==='openai-compatible')return new ApiPeer(config);
   throw Error('Unsupported adapter type');

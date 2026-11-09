@@ -13,6 +13,16 @@
     "exchangeTool": "gpt_exchange",
     "env": {"RELAY_CODEX_EXE": "ABSOLUTE_PATH_TO_CODEX"}
   },
+  "deepseek": {
+    "type": "deepseek-harness",
+    "command": "ABSOLUTE_PATH_TO_NODE",
+    "args": ["ABSOLUTE_PATH_TO_DSH/lib/bin.js"]
+  },
+  "antigravity": {
+    "type": "antigravity",
+    "command": "ABSOLUTE_PATH_TO_AGY_EXECUTABLE",
+    "args": []
+  },
   "custom-api": {
     "type": "openai-compatible",
     "url": "https://YOUR_PROVIDER/chat/completions",

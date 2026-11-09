@@ -10,7 +10,7 @@ readline.createInterface({input:process.stdin}).on('line',async line=>{
  if(m.id===undefined)return;
  try{
   let result;
-  if(m.method==='initialize')result={protocolVersion:['2024-11-05','2025-03-26','2025-06-18','2025-11-25'].includes(m.params?.protocolVersion)?m.params.protocolVersion:'2025-11-25',capabilities:{tools:{}},serverInfo:{name:'ai-council',version:'0.1.0'},instructions:'User-authorized multi-AI meetings. Create/join room and exchange messages. Idle desktop clients cannot be woken by MCP alone. For automatic discussion use room_run with configured backends. Poll job_status within this turn and summarize room_read results. Never claim completed means consensus. Preserve request IDs on identical retries.'};
+  if(m.method==='initialize')result={protocolVersion:['2024-11-05','2025-03-26','2025-06-18','2025-11-25'].includes(m.params?.protocolVersion)?m.params.protocolVersion:'2025-11-25',capabilities:{tools:{}},serverInfo:{name:'ai-council',version:'0.2.0'},instructions:'User-authorized multi-AI meetings. Create/join room and exchange messages. Idle desktop clients cannot be woken by MCP alone. For automatic discussion use room_run with configured backends. Poll job_status within this turn and summarize room_read results. Never claim completed means consensus. Preserve request IDs on identical retries.'};
   else if(m.method==='ping')result={};
   else if(m.method==='tools/list')result={tools};
   else if(m.method==='tools/call'){
