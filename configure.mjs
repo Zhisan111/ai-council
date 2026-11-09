@@ -10,5 +10,9 @@ if(['deepseek','antigravity'].includes(provider)){
  if(/\.(cmd|bat)$/i.test(executable))throw Error('Provide the JS entrypoint or native executable, not a shell wrapper');
  const js=/\.[cm]?js$/i.test(executable);
  config.backends[provider]={type:provider==='deepseek'?'deepseek-harness':'antigravity',command:js?process.execPath:executable,args:js?[executable]:[]};
+ if(provider==='deepseek'&&process.argv.includes('--stored-auth'))config.backends[provider].storedAuth=true;
+ if(provider==='deepseek')for(const [flag,key]of [['--profile','profile'],['--account-model','accountModel']]){
+  const i=process.argv.indexOf(flag);if(i>=0){const value=process.argv[i+1];if(!value||value.startsWith('--'))throw Error('Missing value for '+flag);config.backends[provider][key]=value;}
+ }
 }else config.backends[provider]={type:'mcp-peer',command:process.execPath,args:[path.join(root,'bridges',provider,'server.mjs')],exchangeTool:provider==='gpt'?'gpt_exchange':'claude_exchange',env:{[provider==='gpt'?'RELAY_CODEX_EXE':'RELAY_CLAUDE_EXE']:executable}};
 writeFileSync(file,JSON.stringify(config,null,2),{mode:0o600});console.log(`Configured ${provider}; restart the hub when no meeting is running. Login separately using the official CLI.`);

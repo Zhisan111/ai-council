@@ -2,3 +2,7 @@ council-data/
 **/logs/
 *.tmp
 node_modules/
+.env
+.env.*
+**/hub.json
+**/state.json

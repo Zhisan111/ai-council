@@ -43,12 +43,13 @@ node configure.mjs .\council-data deepseek "C:\实际路径\node_modules\@deepse
 | --- | --- |
 | 通用 MCP 房间、发言、读取记录 | 已实现，独立客户端连接测试通过 |
 | GPT + Claude 后台自动讨论 | 真实两轮、四条回复验收通过 |
+| GPT + Claude + DeepSeek + Antigravity 同房间 | 真实一轮、四条回复验收通过，后续参与者回应已有观点并保留分歧 |
 | 执行与审核角色调度 | 已实现并通过模拟测试，当前执行者仅生成文本，不修改项目文件 |
 | OpenAI 兼容 API 后台接入 | 已实现，尚未用真实 API 账号验证 |
 | DeepSeek Harness 客户端安装 | 可按其 MCP 能力配置，本包未完成该客户端实机验收 |
 | Antigravity 客户端安装 | 可按其 MCP 能力配置，本包未完成该客户端实机验收 |
 | Antigravity 专用后台适配 | CLI 1.5.3 实机两轮回复及上下文记忆通过 |
-| DeepSeek Harness 专用后台适配 | 协议、续接和失败路径测试通过；官方 CLI 0.2.2-rc.1 实际启动通过，真实模型调用因缺少凭据尚未通过 |
+| DeepSeek Harness 专用后台适配 | 官方 CLI 0.2.2-rc.1 + 已有桌面账号登录，实机两轮回复及上下文记忆通过 |
 | 空闲桌面聊天自动唤醒、原有普通聊天接管 | 不支持；自动模式使用独立后台会话 |
 | 跨电脑多人会议 | 不支持，本版限同一台电脑 |
 
@@ -70,7 +71,19 @@ node configure.mjs .\council-data deepseek "C:\实际路径\node_modules\@deepse
 
 ## 扩展后台
 
-DeepSeek Harness 使用官方 `headless --json`，只接收完整 `final` 且进程成功退出的结果。下一轮显式传入 `--session-id` 并保持工作目录一致；不会使用“最近一次会话”。默认 headless 配置不读取 GUI 中保存的登录；使用服务进程环境中的 `DEEPSEEK_API_KEY`，或按官方文档显式启用 stored-auth overlay。不要把密钥发给参会 AI。官方包可用 `npm install @deepseek-ai/dsh@0.2.2-rc.1` 安装到自己的工具目录，Windows 配置时使用 JS 入口，不能传 `.cmd` 包装器。
+DeepSeek Harness 使用官方 `headless --json`，只接收完整 `final` 且进程成功退出的结果。下一轮显式传入 `--session-id` 并保持工作目录一致；不会使用“最近一次会话”。默认 headless 配置不读取 GUI 中保存的登录；可使用服务进程环境中的 `DEEPSEEK_API_KEY`，或显式启用本包提供的官方 stored-auth overlay。不要把密钥发给参会 AI。官方包可用 `npm install @deepseek-ai/dsh@0.2.2-rc.1` 安装到自己的工具目录，Windows 配置时使用 JS 入口，不能传 `.cmd` 包装器。
+
+已有桌面账号时，设置 `storedAuth: true` 读取 Harness 自己的凭据服务，同时把 `accountModel` 设为桌面中原来选择的模型 ID。仅恢复凭据服务不会把 `deepseek-official` API 路由自动切换成 `deepseek-account` 账号路由，后者需要 `accountModel`。本包不读取、复制或导出账号令牌。
+
+例如，已有桌面账号使用 deepseek-flash，可运行：
+
+```powershell
+node configure.mjs .\council-data deepseek "C:\工具目录\node_modules\@deepseek-ai\dsh\lib\bin.js" --stored-auth --account-model deepseek-flash --profile council-meeting
+```
+
+先用同一个新版 CLI 创建独立配置：`node "C:\工具目录\node_modules\@deepseek-ai\dsh\lib\bin.js" council-meeting --from-default-profile headless --help`。确保服务进程的 `DSH_HOME` 指向已有 Harness 用户目录；通常默认目录已正确，也可在该后台的 env 配置中显式指定。仅创建新的 council-meeting 配置，不覆盖 desktop。
+
+已实测的旧桌面版0.2.1-rc.5不支持本适配器所用 `--permission-mode` 参数，因此应另装新版官方 CLI并创建独立 profile，不直接覆盖旧桌面程序。`--stored-auth`、账号模型选择和 profile 均为明确配置，不擅自改动全局模型设置。
 
 Antigravity 使用官方 `agy --input-format stream-json --output-format stream-json` 常驻进程，等待每轮 `result`，核对会话 ID 和累计轮次。适配器使用 `--settings` 为本次会话设置 strict 工具权限，不改全局设置，要求 CLI 支持该参数（已验证1.5.3）。官方 CLI 与桌面应用共用的登录可能可直接使用；没有登录时须先通过官方程序完成登录。
 
@@ -90,6 +103,6 @@ npm test
 
 21项自动测试包含共享房间、身份隔离、房主限制、去重、防并发重复启动、角色传递、部分失败留档、取消，以及真实 HTTP/MCP 进程通信和持久化。新增适配器测试涵盖两轮上下文、UTF-8分块、流式截断、错误会话、失败退出、缺少凭据和超时。传输测试使用标明身份的模拟 AI，不能算模型实测。
 
-2026-11-09 另行完成了 GPT 与 Claude 的真实讨论：两轮四条回复，第二轮回应对方观点并保留具体分歧。同日 Antigravity 1.5.3 首轮正确回答17×23=391，第二轮在未重复暗号的提示下回答“青松”。DeepSeek 0.2.2-rc.1 返回真实 `MISSING_CREDENTIAL`，因此尚未声称其真实模型讨论通过。GitHub Actions 配置在 Windows/Linux 与 Node22/24 上执行模拟测试，不使用账号密钥。
+2026-11-09 另行完成了 GPT 与 Claude 的真实讨论：两轮四条回复，第二轮回应对方观点并保留具体分歧。同日 Antigravity 1.5.3 和 DeepSeek Harness 0.2.2-rc.1 均首轮正确回答17×23=391，第二轮在未重复暗号的提示下回答“青松”。DeepSeek 最初遇到 `MISSING_CREDENTIAL`；启用已有登录并沿用桌面账号模型路由后通过。GitHub Actions 在 Windows/Linux 与 Node22/24 上的测试通过，不使用账号密钥。
 
 跨屏幕读取、桌面 UI、自动登录和跨电脑网络不属于本包的工作方式。发布到公网前需要另行实现传输加密、房间级授权、配额和部署管理，当前服务拒绝浏览器 Origin 请求且不提供远程监听开关。
