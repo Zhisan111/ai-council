@@ -1,0 +1,22 @@
+{
+  "claude": {
+    "type": "mcp-peer",
+    "command": "ABSOLUTE_PATH_TO_NODE",
+    "args": ["ABSOLUTE_PATH_TO_CLAUDE_RELAY_SERVER"],
+    "exchangeTool": "claude_exchange",
+    "env": {"RELAY_CLAUDE_EXE": "ABSOLUTE_PATH_TO_OFFICIAL_CLAUDE_CLI"}
+  },
+  "gpt": {
+    "type": "mcp-peer",
+    "command": "ABSOLUTE_PATH_TO_NODE",
+    "args": ["ABSOLUTE_PATH_TO_GPT_RELAY_SERVER"],
+    "exchangeTool": "gpt_exchange",
+    "env": {"RELAY_CODEX_EXE": "ABSOLUTE_PATH_TO_CODEX"}
+  },
+  "custom-api": {
+    "type": "openai-compatible",
+    "url": "https://YOUR_PROVIDER/chat/completions",
+    "model": "YOUR_MODEL_ID",
+    "apiKeyEnv": "COUNCIL_API_KEY"
+  }
+}

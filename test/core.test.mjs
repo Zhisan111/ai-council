@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {Council} from '../core.mjs';
+const wait=async c=>{for(let i=0;i<100&&c.running.size;i++)await new Promise(r=>setTimeout(r,10));assert.equal(c.running.size,0);};
+test('shared room, per-client identity, idempotency and bounded automatic review',async()=>{
+ const inputs=[];const c=new Council({backends:{writer:{},reviewer:{}},peerFactory:()=>({exchange:async(goal,message)=>{inputs.push(JSON.parse(message));return 'REVISE: keep uncertainty';},close(){}})});
+ const args={title:'test',goal:'review',mode:'review',request_id:'create'};
+ const {room_id}=c.invoke('alice','room_create',args);
+ assert.equal(c.invoke('alice','room_create',args).room_id,room_id);
+ assert.throws(()=>c.invoke('alice','room_create',{...args,title:'different'}),/reused/);
+ assert.throws(()=>c.invoke('bob','room_read',{room_id}),/Join/);
+ c.invoke('bob','room_join',{room_id,role:'reviewer',request_id:'join'});
+ c.invoke('bob','room_say',{room_id,message:'Independent view',request_id:'say'});
+ assert.equal(c.invoke('alice','room_read',{room_id}).messages[0].author,'bob');
+ assert.throws(()=>c.invoke('bob','room_run',{room_id,participants:['writer','reviewer'],rounds:2,seed:'draft',request_id:'run'}),/owner/);
+ const run={room_id,participants:['writer','reviewer'],rounds:2,seed:'draft',request_id:'run'};
+ const {job_id}=c.invoke('alice','room_run',run);
+ assert.equal(c.invoke('alice','room_run',run).job_id,job_id);
+ assert.throws(()=>c.invoke('alice','room_run',{...run,request_id:'another'}),/busy/);
+ await wait(c);
+ const job=c.invoke('bob','job_status',{job_id});assert.equal(job.status,'completed');assert.equal(job.completed_turns,4);
+ assert.match(job.note,/does not imply/);assert.equal(inputs.length,4);
+ assert.match(inputs[0].role,/author/);assert.match(inputs[1].role,/reviewer/);
+ assert.ok(inputs[3].transcript.length>inputs[0].transcript.length);
+ c.invoke('alice','room_close',{room_id,request_id:'close'});
+ assert.equal(c.invoke('bob','room_read',{room_id}).messages.length,6);
+ assert.throws(()=>c.invoke('bob','room_say',{room_id,message:'later',request_id:'later'}),/closed/);
+});
+test('backend failure retains partial transcript and is not retried',async()=>{
+ let calls=0,closed=0;
+ const c=new Council({backends:{a:{},b:{}},peerFactory:()=>({exchange:async()=>{calls++;if(calls===2)throw Error('offline');return 'first reply';},close(){closed++;}})});
+ const {room_id}=c.invoke('a','room_create',{title:'failure',goal:'test',mode:'discussion',request_id:'c'});
+ const {job_id}=c.invoke('a','room_run',{room_id,participants:['a','b'],rounds:3,seed:'seed',request_id:'r'});
+ await wait(c);assert.equal(c.state.jobs[job_id].status,'failed');assert.equal(calls,2);assert.equal(closed,2);assert.equal(c.room(room_id).messages.length,2);
+});
+test('queued job can be cancelled without spawning any backend',async()=>{
+ const c=new Council({backends:{a:{},b:{}},peerFactory:()=>{throw Error('Must not start');}});
+ const {room_id}=c.invoke('a','room_create',{title:'cancel',goal:'test',mode:'discussion',request_id:'c'});
+ const {job_id}=c.invoke('a','room_run',{room_id,participants:['a','b'],rounds:2,seed:'seed',request_id:'r'});
+ c.invoke('a','job_cancel',{job_id,request_id:'cancel'});await wait(c);
+ assert.equal(c.state.jobs[job_id].status,'cancelled');assert.equal(c.state.jobs[job_id].completed_turns,0);
+});

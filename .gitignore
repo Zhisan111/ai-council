@@ -1,0 +1,4 @@
+council-data/
+**/logs/
+*.tmp
+node_modules/
